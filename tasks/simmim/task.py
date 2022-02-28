@@ -5,14 +5,12 @@ import os
 from pathlib import Path
 
 import torch
-import numpy as np
 from transformers import SwinConfig, AutoModelForMaskedImageModeling, FEATURE_EXTRACTOR_MAPPING
 
 import hivemind
 import torch.distributed
 import transformers
 from torch.optim.lr_scheduler import LambdaLR
-from transformers import AutoTokenizer, DataCollatorForLanguageModeling
 from tasks.base import ParamGroups, LRSchedulerBase
 
 from arguments import BasePeerArguments, CollaborativeArguments, HFTrainerArguments
@@ -46,7 +44,7 @@ class MaskedImageModelingTask(TrainingTaskBase):
             image_size=192,
             patch_size=4,
             embed_dim=512,
-            depths=[2, 2, 2, 2],
+            depths=[2, 2, 26, 2],
             num_heads=[16, 32, 64, 128],
             window_size=6,
         )
