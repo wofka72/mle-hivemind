@@ -67,7 +67,6 @@ class MaskedImageModelingTask(TrainingTaskBase):
 
         super().__init__(model, peer_args, trainer_args, collab_args)
         self.current_sequence_length = mp.Value(ctypes.c_int64, self.trainer_args.max_sequence_length)
-        self.update_sequence_length()  # updated by callback
 
     def _make_param_groups(self) -> ParamGroups:
         no_decay = ["bias", "norm.weight"]
@@ -122,36 +121,7 @@ class MaskedImageModelingTask(TrainingTaskBase):
         return self._training_dataset
 
     def on_step_end(self):
-        return self.update_sequence_length()
-
-    def update_sequence_length(self):
-        """
-        If ramp-up is enabled, start with smaller sequences of initial_sequence_length tokens, then increase linearly
-        to the max_sequence_length over the period of first
-        """
-        current_epoch = self.get_current_epoch()
-        if (
-            self.trainer_args.sequence_length_warmup_steps == 0
-            or current_epoch > self.trainer_args.sequence_length_warmup_steps
-        ):
-            current_sequence_length = self.trainer_args.max_sequence_length
-        else:
-            increment_size = self.trainer_args.pad_to_multiple_of
-            max_sequence_length = self.trainer_args.max_sequence_length
-            initial_sequence_length = self.trainer_args.initial_sequence_length or increment_size
-            sequence_length_warmup_steps = self.trainer_args.sequence_length_warmup_steps
-            assert sequence_length_warmup_steps > 0 and max_sequence_length >= initial_sequence_length
-            length_range = max_sequence_length - initial_sequence_length
-            warmup_relative = min(1, current_epoch / sequence_length_warmup_steps)
-            current_sequence_length = initial_sequence_length + warmup_relative * length_range
-            current_sequence_length = (current_sequence_length // increment_size) * increment_size
-            current_sequence_length = min(max(current_sequence_length, initial_sequence_length), max_sequence_length)
-
-        current_sequence_length = int(current_sequence_length)
-        if current_sequence_length != self.current_sequence_length.value:
-            logger.info(f"Transitioning to sequence length {current_sequence_length}")
-            self.current_sequence_length.value = current_sequence_length
-            # note: it may take time for new sequence length to take effect due to buffering
+        pass
 
     @property
     def data_collator(self):
