@@ -12,7 +12,7 @@ from transformers import HfArgumentParser
 
 from arguments import AuxiliaryPeerArguments, CollaborativeArguments, HFTrainerArguments
 from lib import utils
-from tasks.simmim.task import CausalLMTask
+from tasks.simmim.task import MaskedImageModelingTask
 
 transformers.utils.logging.set_verbosity_warning()
 use_hivemind_log_handler("in_root_logger")
@@ -21,7 +21,7 @@ torch.set_num_threads(1)  # avoid quadratic number of threads
 
 
 class CheckpointHandler:
-    def __init__(self, task: CausalLMTask, peer_args: AuxiliaryPeerArguments):
+    def __init__(self, task: MaskedImageModelingTask, peer_args: AuxiliaryPeerArguments):
         self.task, self.peer_args = task, peer_args
         self.save_checkpoint_epoch_interval = peer_args.save_checkpoint_epoch_interval
         self.prefix = peer_args.run_id
@@ -80,7 +80,7 @@ class CheckpointHandler:
 
 
 def assist_averaging_in_background(
-    lock: threading.Lock, task: CausalLMTask, peer_args: AuxiliaryPeerArguments, finished: threading.Event
+    lock: threading.Lock, task: MaskedImageModelingTask, peer_args: AuxiliaryPeerArguments, finished: threading.Event
 ):
     while not finished.is_set():
         try:
@@ -96,7 +96,7 @@ if __name__ == "__main__":
     peer_args, trainer_args, collab_args = parser.parse_args_into_dataclasses()
     finished, lock = threading.Event(), threading.Lock()
 
-    task = CausalLMTask(peer_args, trainer_args, collab_args)
+    task = MaskedImageModelingTask(peer_args, trainer_args, collab_args)
     dht, optimizer = task.dht, task.optimizer
 
     if peer_args.wandb_project is not None:

@@ -1,95 +1,75 @@
-import ctypes
-import logging
-import multiprocessing as mp
-import multiprocessing.sharedctypes
-from collections import defaultdict
-from functools import partial
-from typing import Optional, Union
-
-import torch.utils.data
-from datasets import IterableDataset, disable_progress_bar
-from transformers import GPT2TokenizerFast
-
-from .yt_streaming import YTDataset
-
-logger = logging.getLogger(__name__)
+import torch
+import numpy as np
+from torchvision.datasets import ImageFolder
+from transformers.models.vit.feature_extraction_vit import ViTFeatureExtractor
+from torchvision.transforms import Compose, Lambda, Normalize, RandomHorizontalFlip, RandomResizedCrop, ToTensor
 
 
-disable_progress_bar()
+class SimMIMDataset(ImageFolder):
+    def __init__(self, root: str, image_size=192,
+                 model_patch_size: int = 4, mask_patch_size: int = 32, mask_ratio: float = 0.5,
+                 feature_extractor=ViTFeatureExtractor()):
+        assert isinstance(image_size, int)
+        super().__init__(root)
+        self.feature_extractor = feature_extractor
+        self.mask_generator = MaskGenerator(
+            input_size=image_size,
+            mask_patch_size=mask_patch_size,
+            model_patch_size=model_patch_size,
+            mask_ratio=mask_ratio,
+        )
+
+        self.transform_image = Compose(
+            [
+                Lambda(lambda img: img.convert("RGB") if img.mode != "RGB" else img),
+                RandomResizedCrop(image_size, scale=(0.67, 1.0), ratio=(3.0 / 4.0, 4.0 / 3.0)),
+                RandomHorizontalFlip(),
+                ToTensor(),
+                Normalize(mean=feature_extractor.image_mean, std=feature_extractor.image_std),
+            ]
+        )
+
+    def __getitem__(self, index: int):
+        image, _ = super().__getitem__(index)
+        return dict(pixel_values=self.transform_image(image), mask=self.mask_generator())
 
 
-def split_list(l, n):
-    # splits list/string into n size chunks
-    return (l[i : i + n] for i in range(0, len(l), n))
+class MaskGenerator:
+    """
+    A class to generate boolean masks for the pretraining task.
+    A mask is a 1D tensor of shape (model_patch_size**2,) where the value is either 0 or 1,
+    where 1 indicates "masked".
+    """
+
+    def __init__(self, input_size=192, mask_patch_size=32, model_patch_size=4, mask_ratio=0.6):
+        self.input_size = input_size
+        self.mask_patch_size = mask_patch_size
+        self.model_patch_size = model_patch_size
+        self.mask_ratio = mask_ratio
+
+        if self.input_size % self.mask_patch_size != 0:
+            raise ValueError("Input size must be divisible by mask patch size")
+        if self.mask_patch_size % self.model_patch_size != 0:
+            raise ValueError("Mask patch size must be divisible by model patch size")
+
+        self.rand_size = self.input_size // self.mask_patch_size
+        self.scale = self.mask_patch_size // self.model_patch_size
+
+        self.token_count = self.rand_size ** 2
+        self.mask_count = int(np.ceil(self.token_count * self.mask_ratio))
+
+    def __call__(self):
+        mask_idx = np.random.permutation(self.token_count)[: self.mask_count]
+        mask = np.zeros(self.token_count, dtype=int)
+        mask[mask_idx] = 1
+
+        mask = mask.reshape((self.rand_size, self.rand_size))
+        mask = mask.repeat(self.scale, axis=0).repeat(self.scale, axis=1)
+
+        return torch.tensor(mask.flatten())
 
 
-def process_instance(tokenizer, text, max_seq_length):
-    tokenized_text = tokenizer.encode(text) + [tokenizer.eos_token_id]
-
-    for chunk in split_list(tokenized_text, max_seq_length):
-        yield chunk
-
-
-def examples_from_documents(tokenizer, documents, max_sequence_length: mp.sharedctypes.Synchronized):
-    texts = (text for text in documents["text"] if len(text) > 0 and not text.isspace())
-
-    new_examples = defaultdict(list)
-
-    for text in texts:
-        try:
-            instances = process_instance(tokenizer, text, int(max_sequence_length.value))
-
-            for instance in instances:
-                new_examples["input_ids"].append(instance)
-        except Exception as e:
-            logger.warning(f"Caught {repr(e)}, ignoring...", exc_info=True)
-
-    return new_examples
-
-
-def make_training_dataset(
-    tokenizer: GPT2TokenizerFast,
-    max_sequence_length: Union[int, mp.sharedctypes.Synchronized],
-    shuffle_buffer_size: int = 10 ** 4,
-    shuffle_seed: Optional[int] = None,
-    preprocessing_batch_size: int = 256,
-):
-    if not isinstance(max_sequence_length, mp.sharedctypes.Synchronized):
-        assert isinstance(max_sequence_length, int)
-        max_sequence_length = mp.Value(ctypes.c_int64, max_sequence_length)
-    assert isinstance(tokenizer, GPT2TokenizerFast)
-    dataset = YTDataset("hahn", "//home/gena/datasets/pile/train")
-    text_col = b"Text"
-
-    def extract_training_columns(batch):
-        return dict(text=[bytes.decode(row, errors="ignore") for row in batch[text_col]])
-
-    dataset = IterableDataset(dataset).map(extract_training_columns, batched=True, batch_size=preprocessing_batch_size)
-
-    dataset = dataset.map(
-        partial(examples_from_documents, tokenizer, max_sequence_length=max_sequence_length),
-        batched=True,
-        batch_size=preprocessing_batch_size,
-    )
-
-    dataset = dataset.shuffle(shuffle_buffer_size, seed=shuffle_seed)
-    dataset = dataset.with_format("torch")
-    return WrappedIterableDataset(dataset)
-
-
-class WrappedIterableDataset(torch.utils.data.IterableDataset):
-    """Wraps huggingface IterableDataset as pytorch IterableDataset, implement default methods for DataLoader"""
-
-    def __init__(self, hf_iterable, verbose: bool = True):
-        self.hf_iterable = hf_iterable
-        self.verbose = verbose
-
-    def __iter__(self):
-        started = False
-        logger.info("Pre-fetching training samples...")
-        while True:
-            for sample in self.hf_iterable:
-                if not started:
-                    logger.info("Began iterating minibatches!")
-                    started = True
-                yield sample
+def collate_fn(examples):
+    pixel_values = torch.stack([example["pixel_values"] for example in examples])
+    mask = torch.stack([example["mask"] for example in examples])
+    return {"pixel_values": pixel_values, "bool_masked_pos": mask}

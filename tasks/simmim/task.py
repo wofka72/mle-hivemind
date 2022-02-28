@@ -4,24 +4,29 @@ import multiprocessing as mp
 import os
 from pathlib import Path
 
+import torch
+import numpy as np
+from transformers import SwinConfig, AutoModelForMaskedImageModeling, FEATURE_EXTRACTOR_MAPPING
+
 import hivemind
 import torch.distributed
 import transformers
 from torch.optim.lr_scheduler import LambdaLR
 from transformers import AutoTokenizer, DataCollatorForLanguageModeling
+from tasks.base import ParamGroups, LRSchedulerBase
 
 from arguments import BasePeerArguments, CollaborativeArguments, HFTrainerArguments
 from lib.training.lamb_8bit import CPULAMB8Bit
 from tasks.base import TrainingTaskBase, register_task
 
-from .data import make_training_dataset
+from .data import SimMIMDataset
 
 hivemind.use_hivemind_log_handler("in_root_logger")
 logger = hivemind.get_logger()
 
 
 @register_task("mim")
-class CausalLMTask(TrainingTaskBase):
+class MaskedImageModelingTask(TrainingTaskBase):
     """A container that defines the training config, model, tokenizer, optimizer and other local training utilities"""
 
     _dht = _optimizer = _training_dataset = _authorizer = None
@@ -31,8 +36,14 @@ class CausalLMTask(TrainingTaskBase):
     ):
         transformers.set_seed(trainer_args.seed)  # seed used for initialization
 
-        self.config = LeanGPTConfig.from_pretrained(peer_args.model_config_path)
-        self.tokenizer = AutoTokenizer.from_pretrained(peer_args.tokenizer_path, cache_dir=peer_args.cache_dir)
+        self.config = SwinConfig(
+            image_size=192,
+            patch_size=4,
+            embed_dim=512,
+            depths=[2, 2, 26, 2],
+            num_heads=[16, 32, 64, 128],
+            window_size=6,
+        )
 
         output_dir = Path(trainer_args.output_dir)
         logger.info(f'Checkpoint dir {output_dir}, contents {list(output_dir.glob("checkpoint*"))}')
@@ -40,11 +51,10 @@ class CausalLMTask(TrainingTaskBase):
 
         if latest_checkpoint_dir is None:
             logger.info(f"Creating model")
-            model = LeanGPTForPreTraining(self.config)
-            model.resize_token_embeddings(len(self.tokenizer))
+            model = AutoModelForMaskedImageModeling.from_config(self.config)
         else:
             logger.info(f"Loading model from {latest_checkpoint_dir}")
-            model = LeanGPTForPreTraining.from_pretrained(latest_checkpoint_dir)
+            model = AutoModelForMaskedImageModeling.from_pretrained(latest_checkpoint_dir)
         if trainer_args.gradient_checkpointing:
             model.gradient_checkpointing_enable()
 
@@ -95,10 +105,18 @@ class CausalLMTask(TrainingTaskBase):
     @property
     def training_dataset(self):
         if self._training_dataset is None:
-            self._training_dataset = make_training_dataset(
-                self.tokenizer,
-                shuffle_seed=hash(self.local_public_key) % 2 ** 31,
-                max_sequence_length=self.current_sequence_length,  # this is a mp.Value that will be changed later
+            FEATURE_EXTRACTOR_TYPES = {
+                conf.model_type: feature_extractor_class
+                for conf, feature_extractor_class in FEATURE_EXTRACTOR_MAPPING.items()
+            }
+            feature_extractor = FEATURE_EXTRACTOR_TYPES[self.config.model_type]()
+
+            self._training_dataset = SimMIMDataset(
+                self.dataset_path,
+                image_size=self.config.image_size,
+                model_patch_size=self.config.patch_size,
+                mask_patch_size=32, mask_ratio=0.5,
+                feature_extractor=feature_extractor
             )
         return self._training_dataset
 

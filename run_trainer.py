@@ -14,7 +14,7 @@ from lib import utils
 from lib.training.callback import CollaborativeCallback
 from lib.training.hf_trainer import CollaborativeHFTrainer, NOPtimizer
 from lib.training.sync import SynchronizationCallback, is_main_process
-from tasks.simmim.task import CausalLMTask
+from tasks.simmim.task import MaskedImageModelingTask
 
 use_hivemind_log_handler("in_root_logger")
 logger = get_logger()
@@ -32,7 +32,7 @@ def main():
         logger.warning("Please specify initial peers or let others join your peer")
 
     utils.setup_logging(trainer_args)
-    task = CausalLMTask(training_peer_args, trainer_args, collab_args)
+    task = MaskedImageModelingTask(training_peer_args, trainer_args, collab_args)
     model = task.model.to(trainer_args.device)
     for param in model.parameters():
         if param.grad is None:

@@ -9,7 +9,6 @@ from torch.utils.data import DataLoader
 from transformers.trainer import Trainer
 
 from arguments import HFTrainerArguments
-from lib.modules.rotary import RotaryEmbeddings
 from lib.training.sync import is_main_process
 
 use_hivemind_log_handler("in_root_logger")
@@ -51,7 +50,7 @@ class CollaborativeHFTrainer(Trainer):
             assert isinstance(self.args, HFTrainerArguments)
             device = f"{model.device_type}:{model.output_device}"
             for module in model.modules():
-                if isinstance(module, RotaryEmbeddings):
+                if hasattr(module, '_set_auxiliary_buffers'):
                     module._set_auxiliary_buffers(max_len=self.args.max_sequence_length, device=device)
 
             logger.warning("DistributedDataParallel: triggering _set_static_graph() to allow checkpointing/reversible")

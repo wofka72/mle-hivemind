@@ -11,7 +11,7 @@ from arguments import CollaborativeArguments, TPUTrainerArguments, TrainingPeerA
 from lib import utils
 from lib.training.callback import CollaborativeCallback
 from lib.training.tpu import TPUManager
-from tasks.mlm.task import MLMTrainingTask
+from tasks.simmim.task import MaskedImageModelingTask
 
 use_hivemind_log_handler("in_root_logger")
 logger = get_logger()
@@ -28,7 +28,7 @@ def main():
         logger.warning("Please specify at least one network endpoint in initial peers.")
 
     utils.setup_logging(trainer_args)
-    task = MLMTrainingTask(peer_args, trainer_args, collab_args)
+    task = MaskedImageModelingTask(peer_args, trainer_args, collab_args)
     model = task.model
 
     # BEGIN init TPU
