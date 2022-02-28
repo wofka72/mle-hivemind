@@ -11,9 +11,8 @@ from torch.optim.lr_scheduler import LambdaLR
 from transformers import AutoTokenizer, DataCollatorForLanguageModeling
 
 from arguments import BasePeerArguments, CollaborativeArguments, HFTrainerArguments
-from lib.models.gpt import LeanGPTConfig, LeanGPTForPreTraining
 from lib.training.lamb_8bit import CPULAMB8Bit
-from tasks.base import LRSchedulerBase, ParamGroups, TrainingTaskBase, register_task
+from tasks.base import TrainingTaskBase, register_task
 
 from .data import make_training_dataset
 
@@ -21,7 +20,7 @@ hivemind.use_hivemind_log_handler("in_root_logger")
 logger = hivemind.get_logger()
 
 
-@register_task("clm")
+@register_task("mim")
 class CausalLMTask(TrainingTaskBase):
     """A container that defines the training config, model, tokenizer, optimizer and other local training utilities"""
 

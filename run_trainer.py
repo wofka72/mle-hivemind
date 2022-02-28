@@ -14,7 +14,7 @@ from lib import utils
 from lib.training.callback import CollaborativeCallback
 from lib.training.hf_trainer import CollaborativeHFTrainer, NOPtimizer
 from lib.training.sync import SynchronizationCallback, is_main_process
-from tasks.gpt.task import CausalLMTask
+from tasks.simmim.task import CausalLMTask
 
 use_hivemind_log_handler("in_root_logger")
 logger = get_logger()

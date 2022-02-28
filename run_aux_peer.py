@@ -12,7 +12,7 @@ from transformers import HfArgumentParser
 
 from arguments import AuxiliaryPeerArguments, CollaborativeArguments, HFTrainerArguments
 from lib import utils
-from tasks.gpt.task import CausalLMTask
+from tasks.simmim.task import CausalLMTask
 
 transformers.utils.logging.set_verbosity_warning()
 use_hivemind_log_handler("in_root_logger")
