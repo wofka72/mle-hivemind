@@ -35,7 +35,7 @@ class MaskedImageModelingTask(TrainingTaskBase):
         self, peer_args: BasePeerArguments, trainer_args: HFTrainerArguments, collab_args: CollaborativeArguments
     ):
         transformers.set_seed(trainer_args.seed)  # seed used for initialization
-
+        self.dataset_path = peer_args.dataset_path
         self.config = SwinConfig(
             image_size=192,
             patch_size=4,

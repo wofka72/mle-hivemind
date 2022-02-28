@@ -112,7 +112,7 @@ class BasePeerArguments:
 
     run_id: str = field(metadata={"help": "A unique experiment name, used as prefix for all DHT keys"})
     model_config_path: Optional[str] = field(default="./model.json", metadata={"help": "Path to the model config"})
-    tokenizer_path: Optional[str] = field(default="./tokenizer", metadata={"help": "Path to the tokenizer"})
+    dataset_path: Optional[str] = field(default="./data", metadata={"help": "Path to the tokenizer"})
     cache_dir: Optional[str] = field(default="./cache", metadata={"help": "Path to the cache"})
     authorize: bool = field(default=False, metadata={"help": "Whether or not to use HF authorizer"})
     client_mode: bool = field(
