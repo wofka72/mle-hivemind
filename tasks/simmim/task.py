@@ -41,7 +41,6 @@ class MaskedImageModelingTask(TrainingTaskBase):
         self, peer_args: BasePeerArguments, trainer_args: HFTrainerArguments, collab_args: CollaborativeArguments
     ):
         transformers.set_seed(trainer_args.seed)  # seed used for initialization
-        self.feature_extractor = FEATURE_EXTRACTOR_TYPES[self.config.model_type]()
         self.dataset_path = peer_args.dataset_path
         self.config = SwinConfig(
             image_size=192,
@@ -51,6 +50,7 @@ class MaskedImageModelingTask(TrainingTaskBase):
             num_heads=[16, 32, 64, 128],
             window_size=6,
         )
+        self.feature_extractor = FEATURE_EXTRACTOR_TYPES[self.config.model_type]()
 
         output_dir = Path(trainer_args.output_dir)
         logger.info(f'Checkpoint dir {output_dir}, contents {list(output_dir.glob("checkpoint*"))}')
