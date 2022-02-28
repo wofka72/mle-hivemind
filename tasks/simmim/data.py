@@ -67,3 +67,9 @@ class MaskGenerator:
         mask = mask.repeat(self.scale, axis=0).repeat(self.scale, axis=1)
 
         return torch.tensor(mask.flatten())
+
+
+    def collate_fn(examples):
+        pixel_values = torch.stack([example["pixel_values"] for example in examples])
+        mask = torch.stack([example["mask"] for example in examples])
+        return {"pixel_values": pixel_values, "bool_masked_pos": mask}
