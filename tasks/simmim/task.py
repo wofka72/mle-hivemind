@@ -64,7 +64,6 @@ class MaskedImageModelingTask(TrainingTaskBase):
             model.gradient_checkpointing_enable()
 
         super().__init__(model, peer_args, trainer_args, collab_args)
-        self.current_sequence_length = mp.Value(ctypes.c_int64, self.trainer_args.max_sequence_length)
 
     def _make_param_groups(self) -> ParamGroups:
         no_decay = ["bias", "norm.weight"]

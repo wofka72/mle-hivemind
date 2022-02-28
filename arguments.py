@@ -68,11 +68,6 @@ class HFTrainerArguments(TrainingArguments):
     gradient_checkpointing: bool = False  # can be enabled to save memory at the cost of ~30% slower training
     fp16: bool = False  # can be enabled depending on the device
 
-    max_sequence_length: int = 2048
-    initial_sequence_length: Optional[int] = 256  # used only if warmup > 0, default = pad_to_multiple_of
-    sequence_length_warmup_steps: int = 7_000
-    pad_to_multiple_of: int = 128  # sequence length will be divisible by this value
-
     output_dir: str = "outputs"
     logging_steps: int = 100
 
