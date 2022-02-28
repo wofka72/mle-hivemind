@@ -43,8 +43,8 @@ class MaskedImageModelingTask(TrainingTaskBase):
         self.config = SwinConfig(
             image_size=192,
             patch_size=4,
-            embed_dim=512,
-            depths=[2, 2, 26, 2],
+            embed_dim=352,
+            depths=[2, 2, 18, 2],
             num_heads=[16, 32, 64, 128],
             window_size=6,
         )
