@@ -26,7 +26,6 @@ class SynchronizationCallback(transformers.TrainerCallback):
     def __init__(self, task: "tasks.TrainingTaskBase", args: "arguments.TrainingPeerArguments"):
         self.task = task
         self.is_master = is_main_process()
-        self._checksum_counter = 0
         self._state_tensors = None
         self._prev_version = self._prev_epoch = -1
 
@@ -42,14 +41,8 @@ class SynchronizationCallback(transformers.TrainerCallback):
         **kwargs,
     ):
         control.should_log = True
-        model = self.task.model
         if torch.distributed.is_initialized():
             self._maybe_sync_model_state()
-
-            self._checksum_counter += 1
-            if self._checksum_counter % 100 == 0:
-                rank = torch.distributed.get_rank()
-                print(end=f"CHECKSUM({rank})={float(sum(p.sum().item() for p in model.parameters()))}\n")
         self.task.on_step_end()
 
     @property
