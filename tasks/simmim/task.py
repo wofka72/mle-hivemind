@@ -125,4 +125,10 @@ class MaskedImageModelingTask(TrainingTaskBase):
 
     @property
     def data_collator(self):
-        return self.training_dataset.collate_fn
+        return collate_fn
+
+
+def collate_fn(examples):
+    pixel_values = torch.stack([example["pixel_values"] for example in examples])
+    mask = torch.stack([example["mask"] for example in examples])
+    return {"pixel_values": pixel_values, "bool_masked_pos": mask}
