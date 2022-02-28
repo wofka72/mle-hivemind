@@ -120,3 +120,7 @@ class IgnoreGradManipulations(nn.Module):
             logger.debug("Successfully bypassed clip_grad_norm_")
         else:
             return torch.nn.utils.clip_grad_norm_(self.module.parameters(), max_norm, norm_type=norm_type)
+
+    def no_sync(self):
+        """Wrap DistributedDataParallel no sync"""
+        return self.module.no_sync()
