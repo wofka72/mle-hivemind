@@ -88,6 +88,7 @@ class SynchronizationCallback(transformers.TrainerCallback):
             if self.is_master:
                 self._prev_version = self._compute_state_version()
                 self._prev_epoch = self.task.optimizer.local_epoch
-                logger.info(f"Broadcasting master params took {time.perf_counter() - t_start} seconds")
+                if time.perf_counter() - t_start > 1:
+                    logger.info(f"Broadcasting master params took {time.perf_counter() - t_start} seconds")
         else:
             logger.debug("Not broadcasting")
