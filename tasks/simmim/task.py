@@ -152,8 +152,7 @@ class MaskedImageModelingTask(TrainingTaskBase):
             self.current_sequence_length.value = current_sequence_length
             # note: it may take time for new sequence length to take effect due to buffering
 
-    @property
-    def data_collator(self):
-        return DataCollatorForLanguageModeling(
-            tokenizer=self.tokenizer, mlm=False, pad_to_multiple_of=self.trainer_args.pad_to_multiple_of
-        )
+    def data_collator(examples):
+        pixel_values = torch.stack([example["pixel_values"] for example in examples])
+        mask = torch.stack([example["mask"] for example in examples])
+        return {"pixel_values": pixel_values, "bool_masked_pos": mask}
