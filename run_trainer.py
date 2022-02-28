@@ -46,7 +46,7 @@ def main():
     trainer = CollaborativeHFTrainer(
         model=model,
         args=trainer_args,
-        tokenizer=task.tokenizer,
+        tokenizer=task.feature_extractor,
         data_collator=task.data_collator,
         data_seed=hash(task.local_public_key),
         train_dataset=task.training_dataset,
