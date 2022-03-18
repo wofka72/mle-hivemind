@@ -10,11 +10,11 @@ class CollaborativeArguments:
     """Configuration for CollaborativeOptimizer and its internals"""
 
     target_batch_size: int = field(
-        default=2 ** 16,
+        default=2048,
         metadata={"help": "Perform optimizer step after all peers collectively accumulate this many samples"},
     )
     matchmaking_time: float = field(
-        default=30.0,
+        default=5.0,
         metadata={"help": "Averaging group will wait for stragglers for at most this many seconds"},
     )
     next_chunk_timeout: float = field(
@@ -53,14 +53,14 @@ class HFTrainerArguments(TrainingArguments):
     per_device_eval_batch_size: int = 1
     gradient_accumulation_steps: int = 1
 
-    learning_rate: float = 2.5e-3  # based on https://arxiv.org/abs/1904.00962
-    total_steps: int = 15625  # total number of collaborative optimizer updates, used for learning rate schedule
-    warmup_steps: int = 3125  # based on https://arxiv.org/abs/1904.00962
+    learning_rate: float = 8e-4  # based on https://arxiv.org/abs/1904.00962
+    total_steps: int = 62560  # total number of collaborative optimizer updates, used for learning rate schedule
+    warmup_steps: int = 6256  # based on https://arxiv.org/abs/1904.00962
     min_learning_rate: float = 1e-5  # learning rate after total_steps have passed
     adam_beta1: float = 0.9
-    adam_beta2: float = 0.95
+    adam_beta2: float = 0.999
     adam_epsilon: float = 1e-6
-    weight_decay: float = 0.01
+    weight_decay: float = 0.05
     max_grad_norm: float = 1.0  # clipping performed by the optimizer; trainer is modified to disable builtin clipping
     clamp_value: float = 1e9  # no clipping by value
     min_8bit_size: int = 2 ** 20

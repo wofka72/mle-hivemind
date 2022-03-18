@@ -43,9 +43,9 @@ class MaskedImageModelingTask(TrainingTaskBase):
         self.config = SwinConfig(
             image_size=192,
             patch_size=4,
-            embed_dim=352,
+            embed_dim=128,
             depths=[2, 2, 18, 2],
-            num_heads=[16, 32, 64, 128],
+            num_heads=[4, 8, 16, 32],
             window_size=6,
         )
         self.feature_extractor = FEATURE_EXTRACTOR_TYPES[self.config.model_type]()
