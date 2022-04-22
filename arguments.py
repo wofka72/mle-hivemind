@@ -75,7 +75,7 @@ class HFTrainerArguments(TrainingArguments):
     do_train: bool = True
     do_eval: bool = False
     logging_first_step = True
-    dataloader_num_workers: int = 0  # temporary fix for https://github.com/huggingface/datasets/issues/3148
+    dataloader_num_workers: int = 1  # temporary fix for https://github.com/huggingface/datasets/issues/3148
     max_steps: int = 10 ** 30
     save_steps: int = 10 ** 30
     save_total_limit: int = 2
@@ -107,7 +107,6 @@ class BasePeerArguments:
 
     run_id: str = field(metadata={"help": "A unique experiment name, used as prefix for all DHT keys"})
     model_config_path: Optional[str] = field(default="./model.json", metadata={"help": "Path to the model config"})
-    dataset_path: Optional[str] = field(default="./data", metadata={"help": "Path to the tokenizer"})
     cache_dir: Optional[str] = field(default="./cache", metadata={"help": "Path to the cache"})
     authorize: bool = field(default=False, metadata={"help": "Whether or not to use HF authorizer"})
     client_mode: bool = field(

@@ -17,7 +17,7 @@ from arguments import BasePeerArguments, CollaborativeArguments, HFTrainerArgume
 from lib.training.lamb_8bit import CPULAMB8Bit
 from tasks.base import TrainingTaskBase, register_task
 
-from .data import SimMIMDataset
+from .data import make_dataset
 
 hivemind.use_hivemind_log_handler("in_root_logger")
 logger = hivemind.get_logger()
@@ -39,7 +39,6 @@ class MaskedImageModelingTask(TrainingTaskBase):
         self, peer_args: BasePeerArguments, trainer_args: HFTrainerArguments, collab_args: CollaborativeArguments
     ):
         transformers.set_seed(trainer_args.seed)  # seed used for initialization
-        self.dataset_path = peer_args.dataset_path
         self.config = SwinConfig(
             image_size=192,
             patch_size=4,
@@ -108,12 +107,12 @@ class MaskedImageModelingTask(TrainingTaskBase):
     @property
     def training_dataset(self):
         if self._training_dataset is None:
-            self._training_dataset = SimMIMDataset(
-                self.dataset_path,
+            self._training_dataset = make_dataset(
                 image_size=self.config.image_size,
                 model_patch_size=self.config.patch_size,
-                mask_patch_size=32, mask_ratio=0.5,
-                feature_extractor=self.feature_extractor
+                mask_patch_size=32,
+                mask_ratio=0.5,
+                feature_extractor=self.feature_extractor,
             )
         return self._training_dataset
 
